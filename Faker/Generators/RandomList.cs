@@ -13,17 +13,17 @@ namespace Faker.Generators
             }
             return false;
         }
-        public object Generate(Type typeToGenerate, GeneratorContext context)
+        public object? Generate(Type typeToGenerate, GeneratorContext context)
         {
             int size = context.Random.Next(0, 20);
-            var list = (IList)Activator.CreateInstance(typeToGenerate);
+            IList? list = (IList?)Activator.CreateInstance(typeToGenerate);
             Type genericType = typeToGenerate.GenericTypeArguments[0];
             for (int i = 0; i < size; i++)
             {
                 var el = context.Faker.Create(genericType);
                 if (el != null)
                 {
-                    list.Add(context.Faker.Create(genericType));
+                    list?.Add(context.Faker.Create(genericType));
                 }
             }
             return list;
