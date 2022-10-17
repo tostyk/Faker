@@ -3,10 +3,76 @@ using System.Reflection;
 
 namespace Faker
 {
-    public interface IFaker
+    class SizeComparer : IComparer<ConstructorInfo>
     {
-        public T Create<T>();
-        public object Create(Type t);
+        public int Compare(ConstructorInfo? x, ConstructorInfo? y)
+        {
+            if (x != null && y != null)
+                return y.GetParameters().Length - x.GetParameters().Length;
+            else 
+                return 0;
+        }
+    }
+    class PrivateMembersComparer : IComparer<ConstructorInfo>
+    {
+        List<PropertyInfo> _privateProperties;
+        List<FieldInfo> _privateFields;
+        public PrivateMembersComparer()
+        {
+            _privateProperties = new();
+            _privateFields = new();
+        }
+        public PrivateMembersComparer(List<PropertyInfo> privateProperties, List<FieldInfo> privateFields)
+        {
+            _privateProperties = privateProperties;
+            _privateFields = privateFields;
+        }
+        public int Compare(ConstructorInfo? x, ConstructorInfo? y)
+        {
+            int xCount = 0;
+            int yCount = 0;
+            if (x != null && y != null)
+            {
+                foreach (ParameterInfo parameter in x.GetParameters())
+                {
+                    foreach (PropertyInfo property in _privateProperties)
+                    {
+                        if (parameter?.Name?.ToLower() == property.Name.ToLower())
+                        {
+                            xCount++;
+                        }
+                    }
+                    foreach (FieldInfo field in _privateFields)
+                    {
+                        if (parameter?.Name?.ToLower() == field.Name.ToLower())
+                        {
+                            xCount++;
+                        }
+                    }
+
+                }
+                foreach (ParameterInfo parameter in y.GetParameters())
+                {
+                    foreach (PropertyInfo property in _privateProperties)
+                    {
+                        if (parameter?.Name?.ToLower() == property.Name.ToLower())
+                        {
+                            yCount++;
+                        }
+                    }
+                    foreach (FieldInfo field in _privateFields)
+                    {
+                        if (parameter?.Name?.ToLower() == field.Name.ToLower())
+                        {
+                            yCount++;
+                        }
+                    }
+                }
+                return yCount - xCount;
+            }
+            else
+                return 0;
+        }
     }
     public class Faker : IFaker
     {
@@ -15,7 +81,7 @@ namespace Faker
         private List<IValueGenerator> _generators;
         private Dictionary<Type, int> _classesInRecursion;
         private FakerConfig _config; 
-        public int RecursionDepthLevel = 2;
+        private int _recursionDepthLevel = 2;
         public Faker()
         {
             _random = new Random(); 
@@ -23,6 +89,7 @@ namespace Faker
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = new FakerConfig();
+            RegisterBaseTypeGenerators();
         }
         public Faker(FakerConfig config)
         {
@@ -31,16 +98,9 @@ namespace Faker
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = config;
+            RegisterBaseTypeGenerators();
         }
-        private void SetProperties(object obj, Type type, Dictionary<Type, int> classesInRecursion)
-        {
-            var properties = type.GetProperties();
-            foreach (PropertyInfo property in properties)
-            {
-                property.SetValue(obj, Create(property.PropertyType));
-            }
-        }
-        private bool CanGenerate(Type type, out object obj)
+        private bool CanGenerate(Type type, out object? obj)
         {
             bool isCanGenerate = false;
             obj = null;
@@ -54,20 +114,132 @@ namespace Faker
             }
             return isCanGenerate;
         }
-        private void SetFields(object obj, Type type, Dictionary<Type, int> classesInRecursion)
+        private void SetProperties(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
         {
-            var fields = type.GetFields();
-            foreach (FieldInfo field in fields)
+            var properties = type.GetProperties();
+            bool customGeneration = false;
+            foreach (PropertyInfo property in properties)
             {
-                field.SetValue(obj, Create(field.FieldType));
+                foreach (MemberInfo memberInfo in generators.Keys)
+                {
+                    if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && memberInfo.DeclaringType != null)
+                    {
+                        property.SetValue(obj, generators[memberInfo].Generate(memberInfo.DeclaringType, _context));
+                        customGeneration = true;
+                    }
+                }
+                if (!customGeneration)
+                    property.SetValue(obj, Create(property.PropertyType));
             }
         }
-        private static object GetDefaultValue(Type type)
+        private void SetFields(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
+        {
+            var fields = type.GetFields();
+            bool customGeneration = false;
+            foreach (FieldInfo field in fields)
+            {
+                foreach (MemberInfo memberInfo in generators.Keys)
+                {
+                    if (memberInfo == field && memberInfo.DeclaringType != null)
+                    {
+                        field.SetValue(obj, generators[memberInfo].Generate(memberInfo.DeclaringType, _context));
+                        customGeneration = true;
+                    }
+                }
+                if (!customGeneration)
+                    field.SetValue(obj, Create(field.FieldType));
+            }
+        }
+        private static object? GetDefaultValue(Type type)
         {
             if (type.IsValueType)
                 return Activator.CreateInstance(type);
             else
                 return null;
+        }
+        private object? CreateByConstructor(Type type)
+        {
+            object? obj = null;
+            List<PropertyInfo> privateProperties = new();
+            List<FieldInfo> privateFields = new();
+            Dictionary<MemberInfo, IValueGenerator>? generators = new();
+
+            var publicFields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            var publicProperties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            if (_config.CustomGenerators.TryGetValue(type, out generators))
+            {
+                foreach (MemberInfo memberInfo in generators.Keys)
+                {
+                    PropertyInfo? propertyInfo = memberInfo as PropertyInfo;
+                    if (propertyInfo != null)
+                        if (!publicProperties.Contains(propertyInfo))
+                        {
+                            privateProperties.Add(propertyInfo);
+                        }
+                    FieldInfo? fieldInfo = memberInfo as FieldInfo;
+                    if (fieldInfo != null)
+                        if (!publicFields.Contains(fieldInfo))
+                        {
+                            privateFields.Add(fieldInfo);
+                        }
+                }
+            }
+            if (generators == null) generators = new();
+
+            List<ConstructorInfo> constructors = type.GetConstructors().ToList();
+            constructors.Sort(new SizeComparer());
+            constructors.Sort(new PrivateMembersComparer(privateProperties, privateFields));
+            foreach (ConstructorInfo constructor in constructors)
+            {
+                try
+                {
+                    var parametersInfo = constructor.GetParameters();
+                    object[] parameters = new object[parametersInfo.Length];
+                    for (int i = 0; i < parametersInfo.Length; i++)
+                    {
+                        IValueGenerator? generator;
+                        if (TryFindParameterGenerator(generators, parametersInfo[i], out generator))
+                        {
+                            parameters[i] = generator.Generate(parametersInfo[i].ParameterType, _context);
+                        }
+                        else
+                        {
+                            parameters[i] = Create(parametersInfo[i].ParameterType);
+                        }
+                    }
+                    obj = Activator.CreateInstance(type, parameters);
+                    break;
+                }
+                catch (Exception)
+                {
+                    obj = null;
+                }
+            }
+            if (obj == null)
+            {
+                obj = GetDefaultValue(type);
+            }
+            if (obj != null)
+            {
+                SetProperties(obj, type, generators);
+                SetFields(obj, type, generators);
+            }
+            return obj;
+        }
+        private bool TryFindParameterGenerator(Dictionary<MemberInfo, IValueGenerator> generators, ParameterInfo parameterInfo, out IValueGenerator? generator)
+        {
+            foreach (MemberInfo memberInfo in generators.Keys)
+            {
+                if (memberInfo.Name.ToLower() == parameterInfo?.Name?.ToLower() &&
+                    generators[memberInfo].CanGenerate(memberInfo.DeclaringType))
+                {
+                    generator = generators[memberInfo];
+                    return true;
+                }
+            }
+            generator = null;
+            return false;
         }
         public void AddGenerator(IValueGenerator generator)
         {
@@ -91,69 +263,32 @@ namespace Faker
             AddGenerator(new RandomDateTime());
             AddGenerator(new RandomList());
         }
-        public T Create<T>()
+        public T? Create<T>()
         {
-            return (T)Create(typeof(T));
+            return (T?)Create(typeof(T?));
         }
-        public object Create(Type type)
+        public object? Create(Type type)
         {
             int recursionDepthLevel;
-            object obj;
+            object? obj;
             if (!_classesInRecursion.TryGetValue(type, out recursionDepthLevel))
             {
                 recursionDepthLevel = 0;
                 _classesInRecursion.Add(type, recursionDepthLevel);
             }
-            if (recursionDepthLevel < RecursionDepthLevel)
+            if (recursionDepthLevel < _recursionDepthLevel)
             {
                 recursionDepthLevel++;
                 _classesInRecursion[type] = recursionDepthLevel;
-                IValueGenerator generator;
                 if (!CanGenerate(type, out obj))
                 {
-                    if (type.IsValueType)
+                    if (type.IsPrimitive)
                     {
                         obj = Activator.CreateInstance(type);
                     }
-                    // reference type
                     else
                     {
-                        var constructors = type.GetConstructors();
-                        int maxCount = -1;
-                        int index = -1;
-                        for (int i = 0; i < constructors.Length; i++)
-                        {
-                            if (maxCount < constructors[i].GetParameters().Length)
-                            {
-                                maxCount = constructors[i].GetParameters().Length;
-                                index = i;
-                            }
-                        }
-                        if (index >= 0)
-                        {
-                            if (maxCount > 0)
-                            {
-                                var parametersInfo = constructors[index].GetParameters();
-                                object[] parameters = new object[parametersInfo.Length];
-                                for (int i = 0; i < parametersInfo.Length; i++)
-                                {
-                                    parameters[i] = Create(parametersInfo[i].ParameterType);
-                                }
-                                obj = constructors[index].Invoke(parameters);
-                            }
-                            // parameterless constructor
-                            else if (maxCount == 0)
-                            {
-                                obj = Activator.CreateInstance(type);
-                            }
-                            SetProperties(obj, type, _classesInRecursion);
-                            SetFields(obj, type, _classesInRecursion);
-                        }
-                        // constructors not found
-                        else
-                        {
-                            obj = null;
-                        }
+                        obj = CreateByConstructor(type);
                     }
                 }
                 if (_classesInRecursion.TryGetValue(type, out recursionDepthLevel))
@@ -173,6 +308,6 @@ namespace Faker
                 obj = GetDefaultValue(type);
             }
             return obj;
-        }
+        }        
     }
 }
