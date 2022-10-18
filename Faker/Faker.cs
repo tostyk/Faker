@@ -122,13 +122,13 @@ namespace Faker
             {
                 foreach (MemberInfo memberInfo in generators.Keys)
                 {
-                    if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && memberInfo.DeclaringType != null)
+                    if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && property.PropertyType != null)
                     {
-                        property.SetValue(obj, generators[memberInfo].Generate(memberInfo.DeclaringType, _context));
+                        property.SetValue(obj, generators[memberInfo].Generate(property.PropertyType, _context));
                         customGeneration = true;
                     }
                 }
-                if (!customGeneration)
+                if (!customGeneration && property.SetMethod != null && property.SetMethod.IsPublic)
                     property.SetValue(obj, Create(property.PropertyType));
             }
         }
@@ -140,9 +140,9 @@ namespace Faker
             {
                 foreach (MemberInfo memberInfo in generators.Keys)
                 {
-                    if (memberInfo == field && memberInfo.DeclaringType != null)
+                    if (memberInfo == field && field.FieldType != null)
                     {
-                        field.SetValue(obj, generators[memberInfo].Generate(memberInfo.DeclaringType, _context));
+                        field.SetValue(obj, generators[memberInfo].Generate(field.FieldType, _context));
                         customGeneration = true;
                     }
                 }
@@ -165,7 +165,7 @@ namespace Faker
             Dictionary<MemberInfo, IValueGenerator>? generators = new();
 
             var publicFields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            var publicProperties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var publicProperties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.SetProperty);
 
             if (_config.CustomGenerators.TryGetValue(type, out generators))
             {
@@ -173,7 +173,7 @@ namespace Faker
                 {
                     PropertyInfo? propertyInfo = memberInfo as PropertyInfo;
                     if (propertyInfo != null)
-                        if (!publicProperties.Contains(propertyInfo))
+                        if (!publicProperties.Contains(propertyInfo) || !propertyInfo.CanWrite)
                         {
                             privateProperties.Add(propertyInfo);
                         }
@@ -231,11 +231,16 @@ namespace Faker
         {
             foreach (MemberInfo memberInfo in generators.Keys)
             {
-                if (memberInfo.Name.ToLower() == parameterInfo?.Name?.ToLower() &&
-                    generators[memberInfo].CanGenerate(memberInfo.DeclaringType))
+                if (memberInfo.Name.ToLower() == parameterInfo?.Name?.ToLower())
                 {
-                    generator = generators[memberInfo];
-                    return true;
+                    PropertyInfo? propertyInfo = memberInfo as PropertyInfo;
+                    FieldInfo? fieldInfo = memberInfo as FieldInfo;
+                    if (propertyInfo != null && generators[memberInfo].CanGenerate(propertyInfo.PropertyType) ||
+                        fieldInfo != null && generators[memberInfo].CanGenerate(fieldInfo.FieldType)) 
+                    {
+                        generator = generators[memberInfo];
+                        return true;
+                    }
                 }
             }
             generator = null;
