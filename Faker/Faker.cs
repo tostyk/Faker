@@ -1,4 +1,5 @@
 ﻿using Faker.Generators;
+using System.IO;
 using System.Reflection;
 
 namespace Faker
@@ -133,7 +134,7 @@ namespace Faker
             }
         }
         private void SetFields(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
-        {
+        { 
             var fields = type.GetFields();
             bool customGeneration = false;
             foreach (FieldInfo field in fields)
@@ -264,9 +265,30 @@ namespace Faker
             AddGenerator(new RandomString());
 
             AddGenerator(new RandomBool());
-
-            AddGenerator(new RandomDateTime());
-            AddGenerator(new RandomList());
+        }
+        public void DownloadGenerators(string directoryPath)
+        {
+            DirectoryInfo directoryInfo = new DirectoryInfo(directoryPath);
+            FileInfo[] filesInfo = directoryInfo.GetFiles();
+            foreach (FileInfo fileInfo in filesInfo)
+            {
+                try
+                {
+                    Assembly asm = Assembly.LoadFrom(directoryPath + "\\" + fileInfo.Name);
+                    Type[] t = asm.GetTypes();
+                    if (t != null)
+                    {
+                        for (int i = 0; i < t.Length; i++)
+                        {
+                            if (t[i].GetInterfaces().Contains(typeof(IValueGenerator)) && !t[i].IsAbstract)
+                            {
+                                AddGenerator((IValueGenerator)Activator.CreateInstance(t[i]));
+                            }
+                        }
+                    }
+                }
+                catch (Exception) { }
+            }
         }
         public T? Create<T>()
         {

@@ -7,12 +7,18 @@ static class Program
     {
         FakerConfig config = new FakerConfig();
         config.Add<TestClass, string>(o => o.ReadonlyString, new MorseStringGenerator());
+
         Faker.Faker faker = new Faker.Faker(config);
-        TestClass? testClass = faker.Create<TestClass?>();
-        if (testClass != null)
-            Console.WriteLine(testClass.ToString(0));
+
+        faker.DownloadGenerators("GeneratorsDll");
+
+        TestClass? testClass = faker.Create<TestClass>();
         ClassWithPrivateConstructor? classWithPrivateConstructor = faker.Create<ClassWithPrivateConstructor>();
-        if (classWithPrivateConstructor == null) Console.WriteLine("classWithPrivateConstructor is null");
+
+        if (testClass != null)
+            Console.WriteLine(testClass.ToString());
+        if (classWithPrivateConstructor == null) 
+            Console.WriteLine("classWithPrivateConstructor is null");
         CycleClassA? cycleClassA = faker.Create<CycleClassA>();
         Console.WriteLine(cycleClassA);
     }
@@ -42,10 +48,8 @@ public class TestClass
     public string publicString;
     public string ReadonlyString { get; }
     public List<TestClass> list;
-    public TestClass test;
     public DateTime dateTime;
     private string privateString { get; set; }
-
     public TestClass() { }
     public TestClass(string readonlyString) 
     {
@@ -62,29 +66,31 @@ public class TestClass
         this.publicString = publicString;
         this.realNumber = realNumber;
     }
-    public string ToString(int nestingLevel)
+    private string Format(int nestingLevel)
     {
-        { 
-        /*string offset = "\n";
+        string offset = "\n";
         for (int i = 0; i < nestingLevel * 3; i++) offset += " ";
         nestingLevel++;
         string str = offset + typeof(TestClass).Name +
-            offset + "public int     intNumber       " + intNumber +
-            offset + "public double  realNumber      " + realNumber +
-            offset + "public string  publicString    " + publicString +
-            offset + "public string  ReadonlyString  " + ReadonlyString +
-            offset + "public TestClass test          " + test?.ToString(nestingLevel) +
-            offset + "public DateTime dateTime       " + dateTime.ToString() +
-            offset + "private string privateString   " + privateString +
-            offset + "public List<TestClass> list    ";
+            offset + "public  int       intNumber       " + intNumber +
+            offset + "public  double    realNumber      " + realNumber +
+            offset + "public  string    publicString    " + publicString +
+            offset + "public  string    ReadonlyString  " + ReadonlyString +
+            offset + "public  DateTime  dateTime        " + dateTime.ToString() +
+            offset + "private string    privateString   " + privateString +
+            offset + "public  List<TestClass> list ";
         nestingLevel++;
         foreach (TestClass test in list)
         {
-            str += test?.ToString(nestingLevel);
+            str += test?.Format(nestingLevel);
         }
-        str += "\n";*/
+        str += "\n";
+        return str;
     }
-        string str = string.Empty;
+    public override string ToString()
+    {
+        return Format(0);
+        {/*string str = string.Empty;
         MemberInfo[] members = typeof(TestClass).GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
         foreach (MemberInfo member in members)
         {
@@ -100,8 +106,8 @@ public class TestClass
                 object value = field?.GetValue(this);
                 str += string.Format("{0, -10} {1, -15}: {2, -15} {3, -15} \n", field.MemberType, field.FieldType, field.Name, value?.ToString());
             }
+        }*/
         }
-        return str;
     }
 }
 public struct TestStruct
