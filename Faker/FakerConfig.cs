@@ -7,7 +7,7 @@ namespace Faker
     public class FakerConfig
     {
         // Type - class type
-        public Dictionary<Type, Dictionary<MemberInfo, IValueGenerator>> CustomGenerators = new();
+        internal Dictionary<Type, Dictionary<MemberInfo, IValueGenerator>> CustomGenerators = new();
         public void Add<C, T>(Expression<Func<C, T>> expression, IValueGenerator valueGenerator)
         {
             MemberExpression memberExpression = expression.Body as MemberExpression;

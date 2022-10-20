@@ -81,15 +81,16 @@ namespace Faker
         private GeneratorContext _context;
         private List<IValueGenerator> _generators;
         private Dictionary<Type, int> _classesInRecursion;
-        private FakerConfig _config; 
-        private int _recursionDepthLevel = 2;
+        private FakerConfig _config;
+        public int TypeCycleCounter { get; set; }
         public Faker()
         {
-            _random = new Random(); 
+            _random = new Random();
             _context = new GeneratorContext(_random, this);
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = new FakerConfig();
+            TypeCycleCounter = 2;
             RegisterBaseTypeGenerators();
         }
         public Faker(FakerConfig config)
@@ -99,6 +100,7 @@ namespace Faker
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = config;
+            TypeCycleCounter = 2;
             RegisterBaseTypeGenerators();
         }
         private bool CanGenerate(Type type, out object? obj)
@@ -121,36 +123,42 @@ namespace Faker
             bool customGeneration = false;
             foreach (PropertyInfo property in properties)
             {
-                foreach (MemberInfo memberInfo in generators.Keys)
+                try
                 {
-                    if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && property.PropertyType != null)
+                    foreach (MemberInfo memberInfo in generators.Keys)
                     {
-                        property.SetValue(obj, generators[memberInfo].Generate(property.PropertyType, _context));
-                        customGeneration = true;
+                        if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && property.PropertyType != null)
+                        {
+                            property.SetValue(obj, generators[memberInfo].Generate(property.PropertyType, _context));
+                            customGeneration = true;
+                        }
                     }
-                }
-                if (!customGeneration && property.SetMethod != null && property.SetMethod.IsPublic)
-                    property.SetValue(obj, Create(property.PropertyType));
+                    if (!customGeneration && property.SetMethod != null && property.SetMethod.IsPublic)
+                        property.SetValue(obj, Create(property.PropertyType));
+                } catch (Exception) { }
             }
         }
         private void SetFields(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
-        { 
+        {
             var fields = type.GetFields();
             bool customGeneration = false;
             foreach (FieldInfo field in fields)
             {
-                foreach (MemberInfo memberInfo in generators.Keys)
+                try
                 {
-                    if (memberInfo == field && field.FieldType != null)
+                    foreach (MemberInfo memberInfo in generators.Keys)
                     {
-                        field.SetValue(obj, generators[memberInfo].Generate(field.FieldType, _context));
-                        customGeneration = true;
+                        if (memberInfo == field && field.FieldType != null)
+                        {
+                            field.SetValue(obj, generators[memberInfo].Generate(field.FieldType, _context));
+                            customGeneration = true;
+                        }
                     }
-                }
-                if (!customGeneration)
-                    field.SetValue(obj, Create(field.FieldType));
+                    if (!customGeneration)
+                        field.SetValue(obj, Create(field.FieldType));
+                } catch (Exception) { }
             }
-        }
+        } 
         private static object? GetDefaultValue(Type type)
         {
             if (type.IsValueType)
@@ -296,17 +304,17 @@ namespace Faker
         }
         public object? Create(Type type)
         {
-            int recursionDepthLevel;
+            int typeCycleCounter;
             object? obj;
-            if (!_classesInRecursion.TryGetValue(type, out recursionDepthLevel))
+            if (!_classesInRecursion.TryGetValue(type, out typeCycleCounter))
             {
-                recursionDepthLevel = 0;
-                _classesInRecursion.Add(type, recursionDepthLevel);
+                typeCycleCounter = 0;
+                _classesInRecursion.Add(type, typeCycleCounter);
             }
-            if (recursionDepthLevel < _recursionDepthLevel)
+            if (typeCycleCounter < TypeCycleCounter)
             {
-                recursionDepthLevel++;
-                _classesInRecursion[type] = recursionDepthLevel;
+                typeCycleCounter++;
+                _classesInRecursion[type] = typeCycleCounter;
                 if (!CanGenerate(type, out obj))
                 {
                     if (type.IsPrimitive)
@@ -318,9 +326,9 @@ namespace Faker
                         obj = CreateByConstructor(type);
                     }
                 }
-                if (_classesInRecursion.TryGetValue(type, out recursionDepthLevel))
+                if (_classesInRecursion.TryGetValue(type, out typeCycleCounter))
                 {
-                    if (recursionDepthLevel > 0)
+                    if (typeCycleCounter > 0)
                     {
                         _classesInRecursion[type]--;
                     }
