@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32922.545
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FakerConsole", "FakerConsole\FakerConsole.csproj", "{A7C63E78-87B9-462E-AA3A-A9EA2E4DA77B}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faker", "Faker\Faker.csproj", "{5DF98289-FDF6-4284-B1E5-B1231F9FAB9C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RandomList", "FakerGenerators\RandomList.csproj", "{F652C633-51C0-4BDF-9D3F-EDBC60A73ABA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RandomDateTime", "RandomDateTime\RandomDateTime.csproj", "{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomDateTime", "RandomDateTime\RandomDateTime.csproj", "{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faker.Example", "Faker.Example\Faker.Example.csproj", "{F8AE2730-DE38-4082-A08A-DDF0B3C4D9B1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RandomList", "RandomList\RandomList.csproj", "{7652758B-A6E8-4CB5-8FD0-97BAE565BB28}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Faker.Tests", "Faker.Tests\Faker.Tests.csproj", "{650BAC92-D3C3-4947-8130-77596BA3BC0A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,22 +19,26 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A7C63E78-87B9-462E-AA3A-A9EA2E4DA77B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7C63E78-87B9-462E-AA3A-A9EA2E4DA77B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A7C63E78-87B9-462E-AA3A-A9EA2E4DA77B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A7C63E78-87B9-462E-AA3A-A9EA2E4DA77B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5DF98289-FDF6-4284-B1E5-B1231F9FAB9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5DF98289-FDF6-4284-B1E5-B1231F9FAB9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DF98289-FDF6-4284-B1E5-B1231F9FAB9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5DF98289-FDF6-4284-B1E5-B1231F9FAB9C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F652C633-51C0-4BDF-9D3F-EDBC60A73ABA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F652C633-51C0-4BDF-9D3F-EDBC60A73ABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F652C633-51C0-4BDF-9D3F-EDBC60A73ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F652C633-51C0-4BDF-9D3F-EDBC60A73ABA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E94EDE8-963D-4B72-8F83-D6DACE8C688A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8AE2730-DE38-4082-A08A-DDF0B3C4D9B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8AE2730-DE38-4082-A08A-DDF0B3C4D9B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8AE2730-DE38-4082-A08A-DDF0B3C4D9B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8AE2730-DE38-4082-A08A-DDF0B3C4D9B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7652758B-A6E8-4CB5-8FD0-97BAE565BB28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7652758B-A6E8-4CB5-8FD0-97BAE565BB28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7652758B-A6E8-4CB5-8FD0-97BAE565BB28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7652758B-A6E8-4CB5-8FD0-97BAE565BB28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{650BAC92-D3C3-4947-8130-77596BA3BC0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{650BAC92-D3C3-4947-8130-77596BA3BC0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{650BAC92-D3C3-4947-8130-77596BA3BC0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{650BAC92-D3C3-4947-8130-77596BA3BC0A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
