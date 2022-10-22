@@ -82,7 +82,7 @@ namespace Faker
         private List<IValueGenerator> _generators;
         private Dictionary<Type, int> _classesInRecursion;
         private FakerConfig _config;
-        public int TypeCycleCounter { get; set; }
+        private int _typeCycleCounter;
         public Faker()
         {
             _random = new Random();
@@ -90,7 +90,7 @@ namespace Faker
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = new FakerConfig();
-            TypeCycleCounter = 2;
+            _typeCycleCounter = _config.GetTypeCycleCounter();
             RegisterBaseTypeGenerators();
         }
         public Faker(FakerConfig config)
@@ -100,7 +100,7 @@ namespace Faker
             _generators = new List<IValueGenerator>();
             _classesInRecursion = new Dictionary<Type, int>();
             _config = config;
-            TypeCycleCounter = 2;
+            _typeCycleCounter = config.GetTypeCycleCounter();
             RegisterBaseTypeGenerators();
         }
         private bool CanGenerate(Type type, out object? obj)
@@ -119,7 +119,7 @@ namespace Faker
         }
         private void SetProperties(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
         {
-            var properties = type.GetProperties();
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             bool customGeneration = false;
             foreach (PropertyInfo property in properties)
             {
@@ -136,11 +136,12 @@ namespace Faker
                     if (!customGeneration && property.SetMethod != null && property.SetMethod.IsPublic)
                         property.SetValue(obj, Create(property.PropertyType));
                 } catch (Exception) { }
+                if (property.GetValue(obj) == null && _config.ThrowExceptions) throw new FakerException();
             }
         }
         private void SetFields(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
         {
-            var fields = type.GetFields();
+            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
             bool customGeneration = false;
             foreach (FieldInfo field in fields)
             {
@@ -157,14 +158,18 @@ namespace Faker
                     if (!customGeneration)
                         field.SetValue(obj, Create(field.FieldType));
                 } catch (Exception) { }
+                if (field.GetValue(obj) == null && _config.ThrowExceptions) throw new FakerException();
             }
         } 
-        private static object? GetDefaultValue(Type type)
+        private object? GetDefaultValue(Type type)
         {
             if (type.IsValueType)
                 return Activator.CreateInstance(type);
-            else
-                return null;
+            else 
+                if (_config.ThrowExceptions)
+                    throw new FakerException();
+                else
+                    return null;
         }
         private object? CreateByConstructor(Type type)
         {
@@ -234,6 +239,8 @@ namespace Faker
                 SetProperties(obj, type, generators);
                 SetFields(obj, type, generators);
             }
+            if (obj == null && _config.ThrowExceptions)
+                throw new FakerException();
             return obj;
         }
         private bool TryFindParameterGenerator(Dictionary<MemberInfo, IValueGenerator> generators, ParameterInfo parameterInfo, out IValueGenerator? generator)
@@ -311,7 +318,7 @@ namespace Faker
                 typeCycleCounter = 0;
                 _classesInRecursion.Add(type, typeCycleCounter);
             }
-            if (typeCycleCounter < TypeCycleCounter)
+            if (typeCycleCounter < _typeCycleCounter)
             {
                 typeCycleCounter++;
                 _classesInRecursion[type] = typeCycleCounter;
@@ -342,6 +349,8 @@ namespace Faker
             {
                 obj = GetDefaultValue(type);
             }
+            if (obj == null && _config.ThrowExceptions)
+                throw new FakerException();
             return obj;
         }        
     }

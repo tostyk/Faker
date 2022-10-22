@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace Faker.Tests
 {
     public class MorseStringGenerator : IValueGenerator
@@ -99,7 +101,7 @@ namespace Faker.Tests
         [SetUp]
         public void Setup()
         {
-            _faker = new();
+            _faker = new Faker();
         }
         [Test]
         public void DownloadDll()
@@ -112,9 +114,8 @@ namespace Faker.Tests
         [Test]
         public void SelectConstructor()
         {
-            _faker.DownloadGenerators("GeneratorsDll");
             TestClass? testClass = _faker.Create<TestClass>();
-            Assert.That(testClass, Is.Not.Null);
+            Assert.IsNotNull(testClass);
             Assert.IsNull(testClass.GetPrivateString());
             Assert.IsNotNull(testClass.ReadonlyString);
         }
@@ -165,8 +166,10 @@ namespace Faker.Tests
         [Test]
         public void ChangeCycleCounter()
         {
-            _faker.TypeCycleCounter = 3;
-            CyclicalClassA? a = _faker.Create<CyclicalClassA>();
+            FakerConfig config = new FakerConfig();
+            config.SetTypeCycleCounter(3);
+            Faker fakerWithConfig = new Faker(config);
+            CyclicalClassA? a = fakerWithConfig.Create<CyclicalClassA>();
             Assert.IsNotNull(a);
             Assert.IsNotNull(a.b);
             Assert.IsNotNull(a.b.c);
@@ -177,6 +180,32 @@ namespace Faker.Tests
             Assert.IsNotNull(a.b.c.a.b.c.a.b);
             Assert.IsNotNull(a.b.c.a.b.c.a.b.c);
             Assert.IsNull(a.b.c.a.b.c.a.b.c.a);
+        }
+        [Test]
+        public void FakerExceptions()
+        {
+            FakerConfig config = new FakerConfig();
+            config.ThrowExceptions = true; ;
+            Faker fakerWithConfig = new Faker(config);
+            TestClass? testClass;
+            Assert.Throws<FakerException>(Method_CyclicalClass);
+            Assert.Throws<FakerException>(Method_ClassWithPrivateConstructor);
+        }
+        public void Method_CyclicalClass()
+        {
+            FakerConfig config = new FakerConfig();
+            config.ThrowExceptions = true; ;
+            Faker fakerWithConfig = new Faker(config);
+            CyclicalClassA? a;
+            a = fakerWithConfig.Create<CyclicalClassA>();
+        }
+        public void Method_ClassWithPrivateConstructor()
+        {
+            FakerConfig config = new FakerConfig();
+            config.ThrowExceptions = true; ;
+            Faker fakerWithConfig = new Faker(config);
+            ClassWithPrivateConstructor? c;
+            c = fakerWithConfig.Create<ClassWithPrivateConstructor>();
         }
     }
 }
