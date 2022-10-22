@@ -123,20 +123,34 @@ namespace Faker
             bool customGeneration = false;
             foreach (PropertyInfo property in properties)
             {
+                object propertyValue = null;
                 try
                 {
                     foreach (MemberInfo memberInfo in generators.Keys)
                     {
                         if (memberInfo == property && property.SetMethod != null && property.SetMethod.IsPublic && property.PropertyType != null)
                         {
-                            property.SetValue(obj, generators[memberInfo].Generate(property.PropertyType, _context));
+                            propertyValue = generators[memberInfo].Generate(property.PropertyType, _context);
                             customGeneration = true;
                         }
                     }
                     if (!customGeneration && property.SetMethod != null && property.SetMethod.IsPublic)
-                        property.SetValue(obj, Create(property.PropertyType));
+                    {
+                        propertyValue = Create(property.PropertyType);
+                    }
                 } catch (Exception) { }
-                if (property.GetValue(obj) == null && _config.ThrowExceptions) throw new FakerException();
+                if (propertyValue == null && _config.ThrowExceptions) 
+                    throw new FakerException();
+                else if (property.SetMethod != null && property.SetMethod.IsPublic)
+                {
+                    try
+                    {
+                        property.SetValue(obj, propertyValue);
+                    } catch (Exception) {
+                        if (_config.ThrowExceptions)
+                            throw new FakerException();
+                    }
+                }
             }
         }
         private void SetFields(object obj, Type type, Dictionary<MemberInfo, IValueGenerator> generators)
@@ -280,6 +294,7 @@ namespace Faker
             AddGenerator(new RandomString());
 
             AddGenerator(new RandomBool());
+            AddGenerator(new RandomDictionary());
         }
         public void DownloadGenerators(string directoryPath)
         {

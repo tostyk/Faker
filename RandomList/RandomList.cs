@@ -15,7 +15,7 @@ namespace Faker.Generators
         }
         public object? Generate(Type typeToGenerate, GeneratorContext context)
         {
-            int size = context.Random.Next(0, 20);
+            int size = context.Random.Next(3, 5);
             IList? list = (IList?)Activator.CreateInstance(typeToGenerate);
             Type genericType = typeToGenerate.GenericTypeArguments[0];
             for (int i = 0; i < size; i++)

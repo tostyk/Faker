@@ -1,4 +1,4 @@
-using System.Collections;
+using NUnit.Framework.Internal;
 
 namespace Faker.Tests
 {
